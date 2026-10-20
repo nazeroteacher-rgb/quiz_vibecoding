@@ -116,6 +116,18 @@
   .board .lb li:nth-child(1) .rk{font-size:2rem}
   .joinurl{background:var(--bg);border-radius:12px;padding:12px 14px;font-weight:700;word-break:break-all;margin:8px 0 20px}
 
+  /* 대기 안내 · 카운트다운 */
+  .waitbox{background:var(--main-soft);color:var(--main);border-radius:16px;padding:18px;font-weight:700;line-height:1.7;text-align:center}
+  .waitbox.pulse{animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.6}}
+  .status{display:inline-block;padding:10px 16px;border-radius:999px;font-weight:900}
+  .status.wait{background:var(--hint-soft);color:#b06a00}
+  .status.go{background:var(--ok-soft);color:var(--ok)}
+  .overlay{position:fixed;inset:0;background:rgba(31,36,48,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;color:#fff;text-align:center;padding:16px}
+  .overlay .num{font-size:min(12rem,40vw);font-weight:900;line-height:1;animation:zoom .9s ease}
+  .overlay p{font-size:1.5rem;font-weight:700;margin-top:16px}
+  @keyframes zoom{from{transform:scale(1.8);opacity:0}to{transform:scale(1);opacity:1}}
+
   @media (max-width:900px){
     .layout{grid-template-columns:1fr}
     .side{position:static}
@@ -153,15 +165,15 @@
     <h1 style="margin-top:14px">👋 <span id="hello"></span> 선생님, 환영해요!</h1>
     <p class="lead">토큰, API, 프론트엔드… 처음 들어도 괜찮아요!<br>힌트를 마음껏 열어 보는 <b>용기</b>와 빠르게 누르는 <b>민첩함</b>만 있으면 누구나 맞힐 수 있어요.</p>
     <div class="rules">
-      <div class="rule"><b>💡 힌트 3개 + 50:50</b>문제마다 힌트가 넉넉히 준비되어 있어요.</div>
-      <div class="rule"><b>🦁 힌트는 감점 없음</b>힌트를 여는 건 용기의 증거! 마음껏 쓰세요.</div>
+      <div class="rule"><b>📝 전체 18문제</b>문제마다 힌트 3개 + 50:50이 준비되어 있어요.</div>
+      <div class="rule"><b>🦁 용기 비용 -1점</b>힌트·50:50을 열 때마다 1점씩 빠져요. 그래도 틀리는 것보단 이득!</div>
       <div class="rule"><b>⚡ 민첩 보너스</b>10초 안에 맞히면 +5점이 추가돼요.</div>
     </div>
     <h2>함께 입장한 선생님 <span id="peopleCnt" style="color:var(--main)">0</span>명</h2>
     <div class="people" id="people"></div>
-    <div class="row">
-      <button class="btn btn-main" onclick="startQuiz(10)">10문제 도전</button>
-      <button class="btn btn-ghost" onclick="startQuiz(999)">전체 문제 도전</button>
+    <div class="waitbox pulse" id="waitBox"></div>
+    <div class="row hidden" id="soloRow" style="margin-top:12px">
+      <button class="btn btn-main" onclick="beginCountdown()">혼자 연습 시작</button>
     </div>
   </div>
 
@@ -180,7 +192,7 @@
       <div class="bar"><i id="bar"></i></div>
       <div class="question" id="qtext"></div>
       <div class="hintbox">
-        <div class="hinttitle">💡 힌트 창고 — 눌러도 감점 없어요!</div>
+        <div class="hinttitle">💡 힌트 창고 — 하나 열 때마다 용기 비용 -1점</div>
         <div class="hintbtns">
           <button class="btn hbtn" id="h0" onclick="showHint(0)">힌트 1</button>
           <button class="btn hbtn" id="h1" onclick="showHint(1)">힌트 2</button>
@@ -208,10 +220,7 @@
     <div class="bigscore"><span id="finalScore">0</span>점</div>
     <p class="lead" id="finalText" style="margin:0"></p>
     <div class="badges" id="badges"></div>
-    <div class="row" style="justify-content:center">
-      <button class="btn btn-main" onclick="startQuiz(10)">10문제 다시</button>
-      <button class="btn btn-ghost" onclick="startQuiz(999)">전체 다시</button>
-    </div>
+    <div class="waitbox">🔁 강사님이 새 라운드를 시작하면 다시 도전할 수 있어요</div>
     <div class="result-board">
       <div class="lb-head"><h2>🏆 실시간 순위</h2><span class="live">LIVE</span></div>
       <ul class="lb" id="resultBoard"></ul>
@@ -230,10 +239,21 @@
     </div>
     <p class="lead" style="margin-bottom:4px">참가 주소</p>
     <div class="joinurl" id="joinUrl"></div>
-    <ul class="lb" id="bigBoard"></ul>
-    <div class="row" style="justify-content:flex-end;margin-top:20px">
-      <button class="btn btn-danger" onclick="resetRoom()">🗑 이 방 순위 초기화</button>
+    <div class="row" style="justify-content:space-between;margin-bottom:20px">
+      <span class="status wait" id="roomStatus">⏳ 입장 대기 중</span>
+      <div class="row">
+        <button class="btn btn-main" id="startBtn" onclick="startRound()">▶ 퀴즈 시작</button>
+        <button class="btn btn-ghost hidden" id="waitBtn" onclick="setWaiting()">⏸ 입장 대기로</button>
+        <button class="btn btn-danger" onclick="resetRoom()">🗑 초기화</button>
+      </div>
     </div>
+    <ul class="lb" id="bigBoard"></ul>
+  </div>
+
+  <!-- 카운트다운 -->
+  <div id="countdown" class="overlay hidden">
+    <div class="num" id="cdNum">3</div>
+    <p id="cdText">퀴즈가 곧 시작돼요. 준비하세요!</p>
   </div>
 
 </div>
@@ -243,8 +263,8 @@
    ① Supabase 설정 — 본인 프로젝트 값으로 바꾸세요
    (Supabase 대시보드 > Project Settings > API)
    ========================================================= */
-const SUPABASE_URL = 'https://cytczcwmcusytjgiqvsv.supabase.co';      // 예: https://abcd1234.supabase.co
-const SUPABASE_KEY = 'sb_publishable_gG0YJEIP5gc0RXzwMLLwlQ_OKjtsaRh'; // anon(publishable) 키
+const SUPABASE_URL = 'https://cytczcwmcusytjgiqvsv.supabase.co';   // .supabase.co 에서 끝나야 함
+const SUPABASE_KEY = 'sb_publishable_gG0YJEIP5gc0RXzwMLLwlQ_OKjtsaRh'; // publishable 키 (secret 키 금지)
 
 /* ② 문제 은행 */
 const BANK = [
@@ -329,14 +349,20 @@ const BOARD = params.has('board');                            // ?board 이면 �
 const ONLINE = !SUPABASE_URL.startsWith('YOUR') && !!window.supabase;
 const sb = ONLINE ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 const TABLE = 'quiz_players';
+const ROOMS = 'quiz_rooms';
 const STORE_KEY = 'vibeQuizMe_' + ROOM;
 
 let me = null;          // {id, nickname}
 let players = [];       // 순위 데이터
 let prevScores = {};    // 점수 변화 애니메이션용
+let roomState = {status:'waiting', round:0};   // 강사가 정하는 방 상태
+let phase = 'idle';     // idle / countdown / quiz / result
+let activeRound = null; // 지금 풀고 있는 라운드
+let boardSeenRound = null;
+let joinedAt = 0;
 
 let list=[], idx=0, score=0, correctCnt=0, hintCnt=0, speedCnt=0, missed=new Set();
-let t0=0, timerId=null, answered=false;
+let t0=0, timerId=null, answered=false, qHints=0;
 
 const $ = id => document.getElementById(id);
 const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
@@ -357,18 +383,112 @@ async function fetchPlayers(){
   if(!ONLINE) return renderBoards();
   const { data, error } = await sb.from(TABLE).select('*').eq('room', ROOM)
     .order('score', {ascending:false}).order('updated_at', {ascending:true});
-  if(!error && data){ players = data; renderBoards(); }
+  if(error || !data) return;
+  players = data;
+  if(me && !BOARD && Date.now() - joinedAt > 4000 && !data.some(p => p.id === me.id)){
+    kickedOut(); return;   // 강사가 초기화함
+  }
+  renderBoards();
+}
+
+function kickedOut(){
+  me = null; store.clear(); phase = 'idle'; activeRound = null;
+  clearInterval(timerId); $('countdown').classList.add('hidden');
+  $('nickInput').value = '';
+  show('join');
+  $('joinErr').textContent = '강사님이 순위를 초기화했어요. 다시 입장해 주세요!';
+}
+
+async function fetchRoom(){
+  if(!ONLINE) return;
+  const { data, error } = await sb.from(ROOMS).select('*').eq('room', ROOM).maybeSingle();
+  if(error) return;
+  handleRoom(data || {status:'waiting', round:0});
+}
+
+function handleRoom(state){
+  roomState = state;
+  if(BOARD){
+    const go = state.status === 'started';
+    $('roomStatus').className = 'status ' + (go ? 'go' : 'wait');
+    $('roomStatus').textContent = go ? `▶ ${state.round}라운드 진행 중` : '⏳ 입장 대기 중';
+    $('startBtn').textContent = go ? '🔁 새 라운드 시작' : '▶ 퀴즈 시작';
+    $('waitBtn').classList.toggle('hidden', !go);
+    if(boardSeenRound !== null && go && state.round !== boardSeenRound) beginCountdown(() => {});
+    boardSeenRound = state.round;
+    return;
+  }
+  renderWait();
+  maybeStart();
+}
+
+function renderWait(){
+  if(!ONLINE){
+    $('waitBox').textContent = '혼자 연습 모드예요. 아래 버튼으로 시작하세요.';
+    $('soloRow').classList.remove('hidden'); return;
+  }
+  const done = me && roomState.status === 'started' && roomState.round === me.playedRound;
+  $('waitBox').innerHTML = done
+    ? '✅ 이번 라운드를 완료했어요.<br>강사님이 새 라운드를 시작하면 다시 도전할 수 있어요.'
+    : '⏳ 강사님이 퀴즈를 시작하면<br>3, 2, 1 카운트다운 후 자동으로 시작돼요!';
+}
+
+function maybeStart(){
+  if(BOARD || !ONLINE || !me) return;
+  const r = roomState.round;
+  if(roomState.status === 'started' && r !== me.playedRound && r !== activeRound && phase !== 'countdown'){
+    activeRound = r;
+    beginCountdown();
+  }
+}
+
+function beginCountdown(done){
+  done = done || startQuiz;
+  phase = BOARD ? phase : 'countdown';
+  clearInterval(timerId);
+  const seq = ['3','2','1','시작!'];
+  const el = $('cdNum');
+  $('countdown').classList.remove('hidden');
+  let i = 0;
+  const tick = () => {
+    if(i >= seq.length){ $('countdown').classList.add('hidden'); done(); return; }
+    el.textContent = seq[i];
+    el.style.animation = 'none'; void el.offsetHeight; el.style.animation = '';
+    i++; setTimeout(tick, i === seq.length ? 700 : 1000);
+  };
+  tick();
+}
+
+async function startRound(){
+  if(!ONLINE){ alert('Supabase 연결 후 사용할 수 있어요.'); return; }
+  if(roomState.status === 'started' && !confirm('새 라운드를 시작할까요? 모든 선생님의 점수가 0점으로 바뀌어요.')) return;
+  $('startBtn').disabled = true;
+  await sb.from(TABLE).update({score:0, correct:0, answered:0, total:0, finished:false}).eq('room', ROOM);
+  const next = {room:ROOM, status:'started', round:(roomState.round || 0) + 1, updated_at:new Date().toISOString()};
+  const { error } = await sb.from(ROOMS).upsert(next);
+  $('startBtn').disabled = false;
+  if(error){ alert('시작하지 못했어요: ' + error.message + '\n(supabase-rooms.sql 을 실행했는지 확인해 주세요)'); return; }
+  handleRoom(next); fetchPlayers();
+}
+
+async function setWaiting(){
+  if(!ONLINE) return;
+  const next = {room:ROOM, status:'waiting', round:roomState.round || 0, updated_at:new Date().toISOString()};
+  const { error } = await sb.from(ROOMS).upsert(next);
+  if(error){ alert(error.message); return; }
+  handleRoom(next);
 }
 let fetchTimer = null;
-function scheduleFetch(){ clearTimeout(fetchTimer); fetchTimer = setTimeout(fetchPlayers, 250); }
+function scheduleFetch(){ clearTimeout(fetchTimer); fetchTimer = setTimeout(() => { fetchPlayers(); fetchRoom(); }, 250); }
 
 function startLive(){
   if(!ONLINE) return;
   sb.channel('quiz-' + ROOM)
     .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, scheduleFetch)
+    .on('postgres_changes', {event:'*', schema:'public', table:ROOMS}, scheduleFetch)
     .subscribe();
-  setInterval(fetchPlayers, 5000);   // 실시간 연결이 끊겨도 5초마다 보정
-  fetchPlayers();
+  setInterval(() => { fetchPlayers(); fetchRoom(); }, 4000);   // 실시간 연결이 끊겨도 보정
+  fetchPlayers(); fetchRoom();
 }
 
 function sorted(){
@@ -441,7 +561,8 @@ async function join(){
         : '입장에 실패했어요: ' + error.message;
       return;
     }
-    me = {id: data.id, nickname: data.nickname};
+    me = {id: data.id, nickname: data.nickname, playedRound: null};
+    joinedAt = Date.now();
     players.push(data);
   }else{
     $('joinBtn').disabled = false;
@@ -453,17 +574,19 @@ async function join(){
 }
 
 function enterLobby(){
+  phase = 'idle';
   $('hello').textContent = me.nickname;
   $('roomName').textContent = ROOM;
-  renderBoards();
+  renderBoards(); renderWait();
   show('lobby');
+  maybeStart();   // 이미 시작된 방이면 바로 카운트다운
 }
 
 async function leave(){
   if(!confirm('지금 닉네임에서 나가고 새로 입장할까요? (현재 점수는 순위에서 지워져요)')) return;
   if(ONLINE && me) await sb.from(TABLE).delete().eq('id', me.id);
   players = players.filter(p => !me || p.id !== me.id);
-  me = null; store.clear();
+  me = null; store.clear(); phase = 'idle'; activeRound = null;
   $('nickInput').value = '';
   show('join');
 }
@@ -471,13 +594,17 @@ async function leave(){
 async function resetRoom(){
   if(!confirm(`'${ROOM}' 방의 모든 참가자와 점수를 지울까요?`)) return;
   if(!confirm('정말 초기화할까요? 되돌릴 수 없어요.')) return;
-  if(ONLINE) await sb.from(TABLE).delete().eq('room', ROOM);
-  players = []; renderBoards();
+  if(ONLINE){
+    await sb.from(TABLE).delete().eq('room', ROOM);
+    await sb.from(ROOMS).upsert({room:ROOM, status:'waiting', round:roomState.round || 0, updated_at:new Date().toISOString()});
+  }
+  players = []; renderBoards(); fetchRoom();
 }
 
 /* ⑥ 퀴즈 진행 */
-function startQuiz(n){
-  list = shuffle(BANK).slice(0, Math.min(n, BANK.length));
+function startQuiz(){
+  phase = 'quiz';
+  list = shuffle(BANK);   // 항상 전체 문제
   idx=0; score=0; correctCnt=0; hintCnt=0; speedCnt=0; missed=new Set();
   pushMe({score:0, correct:0, answered:0, total:list.length, finished:false});
   show('quiz');
@@ -485,7 +612,7 @@ function startQuiz(n){
 }
 
 function renderQ(){
-  const q = list[idx]; answered = false;
+  const q = list[idx]; answered = false; qHints = 0;
   $('cat').textContent = q.cat;
   $('prog').textContent = `${idx+1} / ${list.length}`;
   $('bar').style.width = `${(idx/list.length)*100}%`;
@@ -510,11 +637,17 @@ function renderQ(){
 function showHint(i){
   if(answered) return;
   const d = document.createElement('div');
-  d.innerHTML = `<b>힌트 ${i+1}</b> · ${list[idx].h[i]}`;
+  d.innerHTML = `<b>힌트 ${i+1}</b> <small>(-1점)</small> · ${list[idx].h[i]}`;
   $('hints').appendChild(d);
   $('h'+i).disabled = true;
   if(i < 2) $('h'+(i+1)).disabled = false;
-  hintCnt++;
+  useHint();
+}
+
+function useHint(){            // 힌트 1개 = 용기 비용 -1점
+  hintCnt++; qHints++; score -= 1;
+  $('score').textContent = score;
+  pushMe({score});
 }
 
 function fifty(){
@@ -526,7 +659,7 @@ function fifty(){
   const d = document.createElement('div');
   d.innerHTML = '<b>✂️ 50:50</b> · 오답 2개를 지웠어요. 이제 반반 확률!';
   $('hints').appendChild(d);
-  hintCnt++;
+  useHint();
 }
 
 function choose(btn){
@@ -541,11 +674,13 @@ function choose(btn){
     let gain = 10, bonus = '';
     if(sec <= 10){ gain += 5; speedCnt++; bonus = '<span class="bonus">⚡ 민첩 보너스 +5</span>'; }
     score += gain; correctCnt++;
-    $('fbTitle').innerHTML = `⭕ 정답! +${gain}점 ${bonus}`;
+    const net = gain - qHints;
+    const cost = qHints ? `<span class="bonus">🦁 용기 비용 -${qHints}</span>` : '';
+    $('fbTitle').innerHTML = `⭕ 정답! 이번 문제 ${net>=0?'+':''}${net}점 ${bonus} ${cost}`;
     $('fb').className = 'feedback show ok';
   }else{
     btn.classList.add('wrong'); missed.add(q.a);
-    $('fbTitle').textContent = `괜찮아요! 정답은 「${q.a}」`;
+    $('fbTitle').textContent = `괜찮아요! 정답은 「${q.a}」` + (qHints ? ` (용기 비용 -${qHints}점)` : '');
     $('fb').className = 'feedback show bad';
   }
   $('fbText').innerHTML = `<b>${q.a}</b> — ${q.exp}`;
@@ -562,10 +697,12 @@ function nextQ(){
 }
 
 function showResult(){
+  phase = 'result';
+  if(me){ me.playedRound = activeRound; store.set(me); }
   pushMe({finished:true});
   show('result');
   $('finalScore').textContent = score;
-  $('finalText').textContent = `${list.length}문제 중 ${correctCnt}문제 정답 · 힌트 ${hintCnt}번 사용 · 민첩 보너스 ${speedCnt}번`;
+  $('finalText').textContent = `${list.length}문제 중 ${correctCnt}문제 정답 · 힌트 ${hintCnt}번 사용(-${hintCnt}점) · 민첩 보너스 ${speedCnt}번`;
   const badges = [];
   if(correctCnt === list.length) badges.push('🏆 만점 마스터');
   if(hintCnt >= list.length) badges.push('🦁 용기 만렙 (힌트 장인)');
@@ -593,7 +730,7 @@ $('nickInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); 
   const saved = store.get();
   if(saved && ONLINE){   // 새로고침해도 같은 닉네임 유지
     const { data } = await sb.from(TABLE).select('*').eq('id', saved.id).maybeSingle();
-    if(data){ me = {id:data.id, nickname:data.nickname}; return enterLobby(); }
+    if(data){ me = {id:data.id, nickname:data.nickname, playedRound:saved.playedRound ?? null}; return enterLobby(); }
     store.clear();
   }
   show('join');

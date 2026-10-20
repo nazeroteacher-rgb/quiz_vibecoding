@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>바이브 코딩 용어 퀴즈</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#f4f1ea; --card:#ffffff; --ink:#1f2430; --sub:#6b7080;
+    --main:#3d5afe; --main-soft:#e8ecff; --ok:#1faa59; --ok-soft:#e3f7eb;
+    --bad:#e5484d; --bad-soft:#fdecec; --hint:#ff9f1c; --hint-soft:#fff3e0;
+    --line:#e3dfd6; --gold:#f5b700;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;justify-content:center;padding:24px 16px}
+  .wrap{width:100%;max-width:1120px}
+  .narrow{max-width:760px;margin:0 auto}
+  .card{background:var(--card);border-radius:22px;padding:32px;box-shadow:0 10px 30px rgba(0,0,0,.06);border:1px solid var(--line)}
+  h1{font-size:2.1rem;font-weight:900;line-height:1.3}
+  h1 span{color:var(--main)}
+  h2{font-size:1.3rem;font-weight:900;margin-bottom:12px}
+  .lead{color:var(--sub);margin:12px 0 24px;line-height:1.7;font-size:1.05rem}
+  .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+  .rule{background:var(--bg);border-radius:14px;padding:16px;line-height:1.6}
+  .rule b{display:block;font-size:1.05rem;margin-bottom:4px}
+  .btn{border:none;cursor:pointer;font-family:inherit;font-weight:700;border-radius:14px;padding:14px 22px;font-size:1.05rem;transition:transform .08s, background .2s}
+  .btn:active{transform:scale(.97)}
+  .btn[disabled]{opacity:.5;cursor:default}
+  .btn-main{background:var(--main);color:#fff}
+  .btn-main:hover:not([disabled]){background:#2f48d8}
+  .btn-ghost{background:var(--main-soft);color:var(--main)}
+  .btn-text{background:none;color:var(--sub);font-weight:400;font-size:.9rem;padding:8px;text-decoration:underline}
+  .btn-danger{background:var(--bad-soft);color:var(--bad)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .chip{display:inline-block;padding:6px 12px;border-radius:999px;font-size:.9rem;font-weight:700;background:var(--main-soft);color:var(--main)}
+  .notice{background:var(--hint-soft);color:#8a5600;border-radius:12px;padding:12px 14px;line-height:1.6;font-size:.92rem;margin-bottom:16px}
+  .hidden{display:none !important}
+
+  /* 입장 */
+  .nick{display:flex;gap:10px;flex-wrap:wrap}
+  .nick input{flex:1;min-width:200px;font-family:inherit;font-size:1.2rem;padding:14px 16px;border-radius:14px;border:2px solid var(--line);outline:none}
+  .nick input:focus{border-color:var(--main)}
+  .err{color:var(--bad);margin-top:10px;font-weight:700;min-height:1.4em}
+
+  /* 대기실 참가자 */
+  .people{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 24px}
+  .person{background:var(--bg);padding:8px 12px;border-radius:999px;font-weight:700;font-size:.95rem;animation:pop .3s ease}
+  .person.me{background:var(--main);color:#fff}
+
+  /* 퀴즈 레이아웃 */
+  .layout{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
+  .side{position:sticky;top:20px;padding:22px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .stats{display:flex;gap:14px;font-weight:700;color:var(--sub);font-size:.95rem;flex-wrap:wrap}
+  .stats .score{color:var(--ink)}
+  .bar{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin-bottom:22px}
+  .bar i{display:block;height:100%;background:var(--main);transition:width .4s}
+  .question{font-size:1.45rem;font-weight:700;line-height:1.6;margin-bottom:22px;word-break:keep-all}
+  .hintbox{background:var(--hint-soft);border-radius:16px;padding:16px;margin-bottom:22px}
+  .hinttitle{font-weight:700;color:#b06a00;margin-bottom:10px;font-size:.95rem}
+  .hintbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .hbtn{background:#fff;border:2px solid var(--hint);color:#b06a00;padding:9px 14px;font-size:.95rem;border-radius:12px}
+  .hbtn:hover:not([disabled]){background:var(--hint);color:#fff}
+  .hbtn[disabled]{opacity:.35}
+  .hints{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+  .hints div{background:#fff;border-radius:10px;padding:10px 14px;line-height:1.6;animation:pop .3s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opt{background:var(--bg);border:2px solid transparent;color:var(--ink);font-size:1.15rem;padding:18px 14px;border-radius:16px;text-align:center}
+  .opt:hover:not([disabled]){border-color:var(--main);background:var(--main-soft)}
+  .opt[disabled]{opacity:1}
+  .opt.gone{opacity:.15;text-decoration:line-through}
+  .opt.correct{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+  .opt.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+  .feedback{margin-top:20px;border-radius:16px;padding:18px;line-height:1.7;display:none}
+  .feedback.show{display:block;animation:pop .3s ease}
+  .feedback.ok{background:var(--ok-soft)}
+  .feedback.bad{background:var(--bad-soft)}
+  .feedback .big{font-size:1.25rem;font-weight:900;margin-bottom:6px}
+  .feedback .bonus{display:inline-block;margin-left:6px;background:#fff;border-radius:8px;padding:2px 8px;font-size:.9rem}
+  .next{margin-top:14px}
+
+  /* 순위표 */
+  .lb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .lb-head h2{margin:0;font-size:1.1rem}
+  .live{font-size:.8rem;font-weight:700;color:var(--bad);display:flex;align-items:center;gap:5px}
+  .live::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--bad);animation:blink 1.2s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .lb{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .lb li{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:8px;background:var(--bg);border-radius:12px;padding:9px 12px;transition:background .3s}
+  .lb li.me{background:var(--main-soft);outline:2px solid var(--main)}
+  .lb .rk{font-weight:900;text-align:center}
+  .lb .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lb .pg{display:block;font-size:.78rem;color:var(--sub);font-weight:400}
+  .lb .sc{font-weight:900;color:var(--main)}
+  .lb .empty{display:block;text-align:center;color:var(--sub);background:none}
+  .bump{animation:bump .5s ease}
+  @keyframes bump{30%{transform:scale(1.04);background:#fff6cc}}
+
+  /* 결과 */
+  .result{text-align:center}
+  .bigscore{font-size:4rem;font-weight:900;color:var(--main);margin:10px 0}
+  .badges{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:16px 0 24px}
+  .badge{background:var(--hint-soft);color:#b06a00;padding:10px 16px;border-radius:14px;font-weight:700}
+  .result-board{text-align:left;margin-top:28px}
+  .review{text-align:left;margin-top:28px}
+  .review li{list-style:none;padding:12px 0;border-bottom:1px solid var(--line);line-height:1.6}
+  .review li b{color:var(--main)}
+  .review li.miss b{color:var(--bad)}
+
+  /* 전광판 모드 (?board) */
+  .board .lb li{padding:16px 20px;font-size:1.4rem;grid-template-columns:60px 1fr auto}
+  .board .lb .pg{font-size:.95rem}
+  .board .lb li:nth-child(1) .rk{font-size:2rem}
+  .joinurl{background:var(--bg);border-radius:12px;padding:12px 14px;font-weight:700;word-break:break-all;margin:8px 0 20px}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr}
+    .side{position:static}
+  }
+  @media (max-width:560px){
+    .card{padding:22px}
+    h1{font-size:1.6rem}
+    .question{font-size:1.2rem}
+    .opts{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 1. 닉네임 입장 -->
+  <div id="join" class="card narrow hidden">
+    <div class="chip">안성 AI·디지털 오픈 클래스</div>
+    <h1 style="margin-top:14px">🎧 <span>바이브 코딩</span> 용어 퀴즈</h1>
+    <p class="lead">닉네임을 정하고 입장하세요. 다른 선생님들과 <b>실시간 순위</b>로 겨뤄요!</p>
+    <div id="offlineNote" class="notice hidden">⚠️ 아직 Supabase가 연결되지 않아 <b>혼자 연습 모드</b>로 실행돼요. 파일 위쪽의 SUPABASE_URL, SUPABASE_KEY를 채우면 실시간 순위가 켜져요.</div>
+    <div class="nick">
+      <input id="nickInput" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off">
+      <button class="btn btn-main" id="joinBtn" onclick="join()">입장하기</button>
+    </div>
+    <div class="err" id="joinErr"></div>
+  </div>
+
+  <!-- 2. 대기실 -->
+  <div id="lobby" class="card narrow hidden">
+    <div class="row" style="justify-content:space-between">
+      <div class="chip">방: <span id="roomName"></span></div>
+      <button class="btn btn-text" onclick="leave()">다른 닉네임으로 입장</button>
+    </div>
+    <h1 style="margin-top:14px">👋 <span id="hello"></span> 선생님, 환영해요!</h1>
+    <p class="lead">토큰, API, 프론트엔드… 처음 들어도 괜찮아요!<br>힌트를 마음껏 열어 보는 <b>용기</b>와 빠르게 누르는 <b>민첩함</b>만 있으면 누구나 맞힐 수 있어요.</p>
+    <div class="rules">
+      <div class="rule"><b>💡 힌트 3개 + 50:50</b>문제마다 힌트가 넉넉히 준비되어 있어요.</div>
+      <div class="rule"><b>🦁 힌트는 감점 없음</b>힌트를 여는 건 용기의 증거! 마음껏 쓰세요.</div>
+      <div class="rule"><b>⚡ 민첩 보너스</b>10초 안에 맞히면 +5점이 추가돼요.</div>
+    </div>
+    <h2>함께 입장한 선생님 <span id="peopleCnt" style="color:var(--main)">0</span>명</h2>
+    <div class="people" id="people"></div>
+    <div class="row">
+      <button class="btn btn-main" onclick="startQuiz(10)">10문제 도전</button>
+      <button class="btn btn-ghost" onclick="startQuiz(999)">전체 문제 도전</button>
+    </div>
+  </div>
+
+  <!-- 3. 퀴즈 + 실시간 순위 -->
+  <div id="quiz" class="layout hidden">
+    <div class="card">
+      <div class="top">
+        <span class="chip" id="cat"></span>
+        <div class="stats">
+          <span id="prog"></span>
+          <span>⏱ <span id="timer">0</span>초</span>
+          <span>🏅 <span id="myRank">-</span>위</span>
+          <span class="score">⭐ <span id="score">0</span>점</span>
+        </div>
+      </div>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="question" id="qtext"></div>
+      <div class="hintbox">
+        <div class="hinttitle">💡 힌트 창고 — 눌러도 감점 없어요!</div>
+        <div class="hintbtns">
+          <button class="btn hbtn" id="h0" onclick="showHint(0)">힌트 1</button>
+          <button class="btn hbtn" id="h1" onclick="showHint(1)">힌트 2</button>
+          <button class="btn hbtn" id="h2" onclick="showHint(2)">힌트 3</button>
+          <button class="btn hbtn" id="h50" onclick="fifty()">✂️ 50:50</button>
+        </div>
+        <div class="hints" id="hints"></div>
+      </div>
+      <div class="opts" id="opts"></div>
+      <div class="feedback" id="fb">
+        <div class="big" id="fbTitle"></div>
+        <div id="fbText"></div>
+        <button class="btn btn-main next" id="nextBtn" onclick="nextQ()">다음 문제 →</button>
+      </div>
+    </div>
+    <aside class="card side">
+      <div class="lb-head"><h2>🏆 실시간 순위</h2><span class="live">LIVE</span></div>
+      <ul class="lb" id="liveBoard"></ul>
+    </aside>
+  </div>
+
+  <!-- 4. 결과 -->
+  <div id="result" class="card narrow result hidden">
+    <h1>🎉 퀴즈 완료!</h1>
+    <div class="bigscore"><span id="finalScore">0</span>점</div>
+    <p class="lead" id="finalText" style="margin:0"></p>
+    <div class="badges" id="badges"></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn btn-main" onclick="startQuiz(10)">10문제 다시</button>
+      <button class="btn btn-ghost" onclick="startQuiz(999)">전체 다시</button>
+    </div>
+    <div class="result-board">
+      <div class="lb-head"><h2>🏆 실시간 순위</h2><span class="live">LIVE</span></div>
+      <ul class="lb" id="resultBoard"></ul>
+    </div>
+    <div class="review">
+      <h2>📒 오늘의 용어 정리</h2>
+      <ul id="review"></ul>
+    </div>
+  </div>
+
+  <!-- 5. 전광판 (강사용: 주소 뒤에 ?board) -->
+  <div id="board" class="card board hidden">
+    <div class="row" style="justify-content:space-between">
+      <h1>🏆 <span>실시간 순위</span></h1>
+      <span class="live" style="font-size:1rem">LIVE · <span id="boardCnt">0</span>명 참가</span>
+    </div>
+    <p class="lead" style="margin-bottom:4px">참가 주소</p>
+    <div class="joinurl" id="joinUrl"></div>
+    <ul class="lb" id="bigBoard"></ul>
+    <div class="row" style="justify-content:flex-end;margin-top:20px">
+      <button class="btn btn-danger" onclick="resetRoom()">🗑 이 방 순위 초기화</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   ① Supabase 설정 — 본인 프로젝트 값으로 바꾸세요
+   (Supabase 대시보드 > Project Settings > API)
+   ========================================================= */
+const SUPABASE_URL = 'https://cytczcwmcusytjgiqvsv.supabase.co/rest/v1/';      // 예: https://abcd1234.supabase.co
+const SUPABASE_KEY = 'sb_publishable_gG0YJEIP5gc0RXzwMLLwlQ_OKjtsaRh'; // anon(publishable) 키
+
+/* ② 문제 은행 */
+const BANK = [
+  {cat:'AI 용어', a:'바이브 코딩',
+   q:'코드를 직접 짜지 않고, 원하는 것을 말로 설명하며 AI와 함께 프로그램을 만드는 방식은?',
+   h:['영어로 "느낌, 분위기"를 뜻하는 단어가 들어가요 🎵','초성: ㅂㅇㅂ ㅋㄷ','바로 오늘 연수 제목에 들어 있어요! "○○○ 코딩"'],
+   exp:'코드를 직접 짜지 않고, 원하는 것을 말로 설명하며 AI와 함께 프로그램을 만드는 방식'},
+  {cat:'AI 용어', a:'LLM',
+   q:'ChatGPT, Claude, Gemini 같은 생성형 AI의 "두뇌"를 부르는 영어 약자는?',
+   h:['우리말로 "대규모 언어 모델"','Large ○○○○ Model — 앞글자만 모아 보세요','알파벳 3글자, 그중 두 글자가 똑같아요'],
+   exp:'대규모 언어 모델. ChatGPT, Claude, Gemini 같은 생성형 AI의 \'두뇌\''},
+  {cat:'AI 용어', a:'프롬프트',
+   q:'AI에게 주는 지시문을 무엇이라고 할까요?',
+   h:['수업으로 치면 학생에게 주는 "과제 안내문"이에요','연극 무대 뒤에서 배우에게 대사를 알려 주는 사람도 이렇게 불러요','초성: ㅍㄹㅍㅌ (4글자)'],
+   exp:'AI에게 주는 지시문. 수업으로 치면 \'과제 안내문\''},
+  {cat:'AI 용어', a:'토큰',
+   q:'AI가 글을 읽고 쓰는 최소 단위로, 사용량과 요금도 이것의 개수로 계산돼요. 무엇일까요?',
+   h:['글자보다는 크고 단어보다는 작은 "조각"이에요','옛날에 버스 탈 때 내던 동전 모양의 그것과 이름이 같아요 🚌','초성: ㅌㅋ (2글자)'],
+   exp:'AI가 글을 읽고 쓰는 최소 단위. 글자보다 크고 단어보다 작은 조각. 사용량과 요금이 토큰 수로 계산됨'},
+  {cat:'AI 용어', a:'컨텍스트 창',
+   q:'AI가 한 번에 기억할 수 있는 대화 분량을 무엇이라고 할까요?',
+   h:['대화가 너무 길어지면 AI가 앞 내용을 잊어버리는 이유예요','"맥락"을 영어로 하면? + 창문의 "창"','초성: ㅋㅌㅅㅌ ㅊ'],
+   exp:'AI가 한 번에 기억할 수 있는 대화 분량. 대화가 너무 길어지면 앞 내용을 잊는 이유'},
+  {cat:'AI 용어', a:'할루시네이션',
+   q:'AI가 그럴듯하지만 사실은 틀린 내용을 만들어 내는 현상은?',
+   h:['우리말로는 "환각" 😵‍💫','AI가 쓴 세특 초안을 반드시 검토해야 하는 이유예요','초성: ㅎㄹㅅㄴㅇㅅ (6글자, "할"로 시작)'],
+   exp:'AI가 그럴듯하지만 틀린 내용을 만들어 내는 현상. 세특 초안을 반드시 검토해야 하는 이유'},
+  {cat:'웹 구조', a:'프론트엔드',
+   q:'사용자가 직접 보고 누르는 화면(버튼, 입력칸) 부분을 무엇이라고 할까요?',
+   h:['식당으로 치면 손님이 앉는 "홀" 🍽️','"앞(Front)" + "끝(End)"','초성: ㅍㄹㅌㅇㄷ'],
+   exp:'사용자가 보는 화면(버튼, 입력칸). 식당의 \'홀\''},
+  {cat:'웹 구조', a:'백엔드(서버)',
+   q:'사용자 눈에 보이지 않는 곳에서 데이터를 처리하는 부분은?',
+   h:['식당으로 치면 손님이 못 보는 "주방" 👩‍🍳','"프론트엔드"의 반대말이에요','"뒤(Back)" + "끝(End)", 초성: ㅂㅇㄷ'],
+   exp:'보이지 않는 곳에서 데이터를 처리하는 부분. 식당의 \'주방\''},
+  {cat:'웹 구조', a:'데이터베이스',
+   q:'학생 제출물처럼 데이터가 차곡차곡 저장되는 곳은?',
+   h:['식당으로 치면 재료를 보관하는 "창고" 📦','줄여서 "DB"라고 불러요','초성: ㄷㅇㅌㅂㅇㅅ'],
+   exp:'데이터를 저장하는 곳. 학생 제출물이 쌓이는 \'창고\''},
+  {cat:'웹 구조', a:'HTML', opts:['HTML','CSS','JavaScript','API'],
+   q:'웹페이지의 "뼈대"를 만드는 언어는?',
+   h:['꾸밈은 CSS, 동작은 JavaScript가 맡아요. 그럼 뼈대는?','웹페이지 파일 이름 끝에 붙는 확장자와 같아요 (index.○○○○)','알파벳 4글자, H로 시작해요'],
+   exp:'HTML은 뼈대, CSS는 꾸밈, JavaScript는 동작'},
+  {cat:'웹 구조', a:'CSS', opts:['HTML','CSS','JavaScript','URL'],
+   q:'웹페이지의 색, 글꼴, 배치 등 "꾸밈"을 담당하는 언어는?',
+   h:['뼈대는 HTML, 동작은 JavaScript. 그럼 꾸밈은?','알파벳 3글자예요','C로 시작해서 S가 두 번 들어가요'],
+   exp:'HTML은 뼈대, CSS는 꾸밈, JavaScript는 동작'},
+  {cat:'웹 구조', a:'API',
+   q:'프로그램끼리 데이터를 주고받는 "약속된 창구"를 무엇이라고 할까요?',
+   h:['식당의 "주문서" 📝 — 정해진 양식으로 요청하면 결과가 돌아와요','알파벳 3글자, A로 시작해요','이 단어 뒤에 "키"를 붙이면 "출입증"이 돼요'],
+   exp:'프로그램끼리 데이터를 주고받는 약속된 창구. 식당의 \'주문서\''},
+  {cat:'웹 구조', a:'API 키',
+   q:'API를 쓸 수 있는 "출입증"으로, 비밀번호처럼 남에게 공개하면 안 되는 것은?',
+   h:['자물쇠를 여는 물건 🔑 이 이름에 들어가요','영어 3글자 + 한글 1글자','"A○○ 키"'],
+   exp:'API를 쓸 수 있는 \'출입증\'. 비밀번호처럼 남에게 공개하면 안 됨'},
+  {cat:'실습 도구', a:'배포',
+   q:'만든 프로그램을 인터넷에 올려 다른 사람이 접속할 수 있게 하는 것은?',
+   h:['학교 앞에서 전단지를 나눠 주는 것도 이 말로 표현해요 📄','초성: ㅂㅍ (2글자)','"배"로 시작해요'],
+   exp:'만든 프로그램을 인터넷에 올려 다른 사람이 접속할 수 있게 하는 것'},
+  {cat:'실습 도구', a:'URL',
+   q:'웹사이트 주소를 영어 약자로 무엇이라고 할까요?',
+   h:['https:// 로 시작하는 그것!','브라우저 맨 위 주소창에 입력하는 것','알파벳 3글자, U로 시작해요'],
+   exp:'웹사이트 주소'},
+  {cat:'문제 해결', a:'에러 메시지',
+   q:'프로그램이 알려 주는 오류 내용으로, 그대로 복사해서 AI에게 주면 되는 것은?',
+   h:['빨간 글씨로 자주 나타나서 깜짝 놀라게 해요 🚨','"오류"를 영어로 + 문자 "메시지"','초성: ㅇㄹ ㅁㅅㅈ'],
+   exp:'프로그램이 알려 주는 오류 내용. 그대로 복사해서 AI에게 주면 됨'},
+  {cat:'문제 해결', a:'디버깅',
+   q:'프로그램의 오류를 찾아서 고치는 과정은?',
+   h:['프로그램 오류를 "벌레(Bug)"라고 불러요. 벌레를 없앤다는 뜻! 🐛','초성: ㄷㅂㄱ (3글자)','"디"로 시작해요'],
+   exp:'오류를 찾아 고치는 과정'},
+  {cat:'문제 해결', a:'콘솔',
+   q:'브라우저의 개발자 도구에서 숨은 에러를 확인할 수 있는 창은?',
+   h:['키보드의 F12를 눌러 보세요 ⌨️','게임기를 부를 때도 이 말을 써요 🎮','초성: ㅋㅅ (2글자)'],
+   exp:'브라우저에서 F12를 누르면 나오는 개발자 도구 창. 숨은 에러를 확인하는 곳'}
+];
+
+/* ③ 기본 설정 */
+const params = new URLSearchParams(location.search);
+const ROOM  = (params.get('room') || 'main').slice(0, 30);   // ?room=1반 처럼 방 분리 가능
+const BOARD = params.has('board');                            // ?board 이면 전광판 모드
+const ONLINE = !SUPABASE_URL.startsWith('YOUR') && !!window.supabase;
+const sb = ONLINE ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+const TABLE = 'quiz_players';
+const STORE_KEY = 'vibeQuizMe_' + ROOM;
+
+let me = null;          // {id, nickname}
+let players = [];       // 순위 데이터
+let prevScores = {};    // 점수 변화 애니메이션용
+
+let list=[], idx=0, score=0, correctCnt=0, hintCnt=0, speedCnt=0, missed=new Set();
+let t0=0, timerId=null, answered=false;
+
+const $ = id => document.getElementById(id);
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){ return null; } },
+  set(v){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(v)); }catch(e){} },
+  clear(){ try{ localStorage.removeItem(STORE_KEY); }catch(e){} }
+};
+
+function show(id){
+  ['join','lobby','quiz','result','board'].forEach(s => $(s).classList.toggle('hidden', s!==id));
+  window.scrollTo(0,0);
+}
+
+/* ④ 실시간 순위 데이터 */
+async function fetchPlayers(){
+  if(!ONLINE) return renderBoards();
+  const { data, error } = await sb.from(TABLE).select('*').eq('room', ROOM)
+    .order('score', {ascending:false}).order('updated_at', {ascending:true});
+  if(!error && data){ players = data; renderBoards(); }
+}
+let fetchTimer = null;
+function scheduleFetch(){ clearTimeout(fetchTimer); fetchTimer = setTimeout(fetchPlayers, 250); }
+
+function startLive(){
+  if(!ONLINE) return;
+  sb.channel('quiz-' + ROOM)
+    .on('postgres_changes', {event:'*', schema:'public', table:TABLE}, scheduleFetch)
+    .subscribe();
+  setInterval(fetchPlayers, 5000);   // 실시간 연결이 끊겨도 5초마다 보정
+  fetchPlayers();
+}
+
+function sorted(){
+  return [...players].sort((a,b) => b.score - a.score || new Date(a.updated_at) - new Date(b.updated_at));
+}
+
+function renderList(el, limit){
+  const arr = sorted();
+  if(arr.length === 0){ el.innerHTML = '<li class="empty">아직 입장한 선생님이 없어요</li>'; return; }
+  let rank = 0, last = null;
+  const ranks = arr.map((p,i) => { if(p.score !== last){ rank = i+1; last = p.score; } return rank; });
+  const medal = r => r===1?'🥇':r===2?'🥈':r===3?'🥉':r;
+  let rows = arr.map((p,i) => ({p, r:ranks[i]}));
+  if(limit && rows.length > limit){
+    const mine = rows.find(x => me && x.p.id === me.id);
+    rows = rows.slice(0, limit);
+    if(mine && !rows.includes(mine)) rows.push(mine);
+  }
+  el.innerHTML = rows.map(({p,r}) => {
+    const changed = prevScores[p.id] !== undefined && prevScores[p.id] !== p.score;
+    const prog = p.finished ? '🏁 완주' : (p.total ? `${p.answered} / ${p.total} 문제` : '대기 중');
+    return `<li class="${me && p.id===me.id ? 'me':''} ${changed?'bump':''}">
+      <span class="rk">${medal(r)}</span>
+      <span class="nm">${esc(p.nickname)}<span class="pg">${prog}</span></span>
+      <span class="sc">${p.score}점</span></li>`;
+  }).join('');
+}
+
+function renderBoards(){
+  if(me){ // 내 점수는 항상 화면 기준으로 반영
+    const mine = players.find(p => p.id === me.id);
+    if(!mine && !ONLINE) players = [{id:me.id, nickname:me.nickname, score, correct:correctCnt, answered:0, total:0, finished:false, updated_at:new Date().toISOString()}];
+  }
+  renderList($('liveBoard'), 10);
+  renderList($('resultBoard'), 0);
+  renderList($('bigBoard'), 0);
+  $('boardCnt').textContent = players.length;
+  $('peopleCnt').textContent = players.length;
+  $('people').innerHTML = players.map(p => `<span class="person ${me && p.id===me.id?'me':''}">${esc(p.nickname)}</span>`).join('');
+  if(me){
+    const arr = sorted();
+    const i = arr.findIndex(p => p.id === me.id);
+    if(i >= 0){ const higher = arr.filter(p => p.score > arr[i].score).length; $('myRank').textContent = higher + 1; }
+  }
+  players.forEach(p => prevScores[p.id] = p.score);
+}
+
+async function pushMe(fields){
+  if(!me) return;
+  const now = new Date().toISOString();
+  const i = players.findIndex(p => p.id === me.id);
+  if(i >= 0) players[i] = {...players[i], ...fields, updated_at: now};
+  renderBoards();
+  if(ONLINE) await sb.from(TABLE).update({...fields, updated_at: now}).eq('id', me.id);
+}
+
+/* ⑤ 입장 / 퇴장 */
+async function join(){
+  const nick = $('nickInput').value.trim();
+  $('joinErr').textContent = '';
+  if(!nick){ $('joinErr').textContent = '닉네임을 입력해 주세요.'; return; }
+  if(nick.length > 12){ $('joinErr').textContent = '닉네임은 12자까지 가능해요.'; return; }
+  $('joinBtn').disabled = true;
+  if(ONLINE){
+    const { data, error } = await sb.from(TABLE).insert({room: ROOM, nickname: nick}).select().single();
+    $('joinBtn').disabled = false;
+    if(error){
+      $('joinErr').textContent = error.code === '23505'
+        ? '이미 사용 중인 닉네임이에요. 다른 닉네임을 써 주세요!'
+        : '입장에 실패했어요: ' + error.message;
+      return;
+    }
+    me = {id: data.id, nickname: data.nickname};
+    players.push(data);
+  }else{
+    $('joinBtn').disabled = false;
+    me = {id: 'local', nickname: nick};
+    players = [{id:'local', nickname:nick, score:0, correct:0, answered:0, total:0, finished:false, updated_at:new Date().toISOString()}];
+  }
+  store.set(me);
+  enterLobby();
+}
+
+function enterLobby(){
+  $('hello').textContent = me.nickname;
+  $('roomName').textContent = ROOM;
+  renderBoards();
+  show('lobby');
+}
+
+async function leave(){
+  if(!confirm('지금 닉네임에서 나가고 새로 입장할까요? (현재 점수는 순위에서 지워져요)')) return;
+  if(ONLINE && me) await sb.from(TABLE).delete().eq('id', me.id);
+  players = players.filter(p => !me || p.id !== me.id);
+  me = null; store.clear();
+  $('nickInput').value = '';
+  show('join');
+}
+
+async function resetRoom(){
+  if(!confirm(`'${ROOM}' 방의 모든 참가자와 점수를 지울까요?`)) return;
+  if(!confirm('정말 초기화할까요? 되돌릴 수 없어요.')) return;
+  if(ONLINE) await sb.from(TABLE).delete().eq('room', ROOM);
+  players = []; renderBoards();
+}
+
+/* ⑥ 퀴즈 진행 */
+function startQuiz(n){
+  list = shuffle(BANK).slice(0, Math.min(n, BANK.length));
+  idx=0; score=0; correctCnt=0; hintCnt=0; speedCnt=0; missed=new Set();
+  pushMe({score:0, correct:0, answered:0, total:list.length, finished:false});
+  show('quiz');
+  renderQ();
+}
+
+function renderQ(){
+  const q = list[idx]; answered = false;
+  $('cat').textContent = q.cat;
+  $('prog').textContent = `${idx+1} / ${list.length}`;
+  $('bar').style.width = `${(idx/list.length)*100}%`;
+  $('score').textContent = score;
+  $('qtext').textContent = q.q;
+  $('hints').innerHTML = '';
+  $('h0').disabled = false; $('h1').disabled = true; $('h2').disabled = true; $('h50').disabled = false;
+  $('fb').className = 'feedback';
+  let opts = q.opts ? [...q.opts] : [q.a, ...shuffle(BANK.filter(b => b.a !== q.a).map(b => b.a)).slice(0,3)];
+  $('opts').innerHTML = '';
+  shuffle(opts).forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'btn opt'; b.textContent = o; b.dataset.v = o;
+    b.onclick = () => choose(b);
+    $('opts').appendChild(b);
+  });
+  t0 = Date.now(); $('timer').textContent = 0;
+  clearInterval(timerId);
+  timerId = setInterval(() => { $('timer').textContent = Math.floor((Date.now()-t0)/1000); }, 250);
+}
+
+function showHint(i){
+  if(answered) return;
+  const d = document.createElement('div');
+  d.innerHTML = `<b>힌트 ${i+1}</b> · ${list[idx].h[i]}`;
+  $('hints').appendChild(d);
+  $('h'+i).disabled = true;
+  if(i < 2) $('h'+(i+1)).disabled = false;
+  hintCnt++;
+}
+
+function fifty(){
+  if(answered) return;
+  const q = list[idx];
+  shuffle([...document.querySelectorAll('.opt')].filter(b => b.dataset.v !== q.a)).slice(0,2)
+    .forEach(b => { b.classList.add('gone'); b.disabled = true; });
+  $('h50').disabled = true;
+  const d = document.createElement('div');
+  d.innerHTML = '<b>✂️ 50:50</b> · 오답 2개를 지웠어요. 이제 반반 확률!';
+  $('hints').appendChild(d);
+  hintCnt++;
+}
+
+function choose(btn){
+  if(answered) return; answered = true;
+  clearInterval(timerId);
+  const q = list[idx];
+  const sec = (Date.now()-t0)/1000;
+  const ok = btn.dataset.v === q.a;
+  document.querySelectorAll('.opt').forEach(b => { b.disabled = true; if(b.dataset.v === q.a) b.classList.add('correct'); });
+  ['h0','h1','h2','h50'].forEach(id => $(id).disabled = true);
+  if(ok){
+    let gain = 10, bonus = '';
+    if(sec <= 10){ gain += 5; speedCnt++; bonus = '<span class="bonus">⚡ 민첩 보너스 +5</span>'; }
+    score += gain; correctCnt++;
+    $('fbTitle').innerHTML = `⭕ 정답! +${gain}점 ${bonus}`;
+    $('fb').className = 'feedback show ok';
+  }else{
+    btn.classList.add('wrong'); missed.add(q.a);
+    $('fbTitle').textContent = `괜찮아요! 정답은 「${q.a}」`;
+    $('fb').className = 'feedback show bad';
+  }
+  $('fbText').innerHTML = `<b>${q.a}</b> — ${q.exp}`;
+  $('score').textContent = score;
+  $('nextBtn').textContent = idx === list.length-1 ? '결과 보기 🏁' : '다음 문제 →';
+  $('nextBtn').focus();
+  pushMe({score, correct:correctCnt, answered:idx+1});
+}
+
+function nextQ(){
+  idx++;
+  if(idx >= list.length) return showResult();
+  renderQ();
+}
+
+function showResult(){
+  pushMe({finished:true});
+  show('result');
+  $('finalScore').textContent = score;
+  $('finalText').textContent = `${list.length}문제 중 ${correctCnt}문제 정답 · 힌트 ${hintCnt}번 사용 · 민첩 보너스 ${speedCnt}번`;
+  const badges = [];
+  if(correctCnt === list.length) badges.push('🏆 만점 마스터');
+  if(hintCnt >= list.length) badges.push('🦁 용기 만렙 (힌트 장인)');
+  if(speedCnt >= Math.ceil(list.length/2)) badges.push('⚡ 번개 손');
+  if(hintCnt === 0) badges.push('🧠 힌트 없이 도전');
+  if(badges.length === 0) badges.push('🌱 바이브 코딩 새싹');
+  $('badges').innerHTML = badges.map(b => `<span class="badge">${b}</span>`).join('');
+  $('review').innerHTML = BANK.map(b => `<li class="${missed.has(b.a)?'miss':''}"><b>${b.a}</b> — ${b.exp}</li>`).join('');
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter' && answered && !$('quiz').classList.contains('hidden')) nextQ();
+});
+$('nickInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
+
+/* ⑦ 시작 */
+(async function init(){
+  if(BOARD){
+    const u = new URL(location.href); u.searchParams.delete('board');
+    $('joinUrl').textContent = u.toString();
+    show('board'); startLive(); return;
+  }
+  if(!ONLINE) $('offlineNote').classList.remove('hidden');
+  startLive();
+  const saved = store.get();
+  if(saved && ONLINE){   // 새로고침해도 같은 닉네임 유지
+    const { data } = await sb.from(TABLE).select('*').eq('id', saved.id).maybeSingle();
+    if(data){ me = {id:data.id, nickname:data.nickname}; return enterLobby(); }
+    store.clear();
+  }
+  show('join');
+  $('nickInput').focus();
+})();
+</script>
+</body>
+</html>
